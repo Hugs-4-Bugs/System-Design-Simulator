@@ -11,7 +11,7 @@ import {
   useEdgesState, 
   MarkerType 
 } from 'reactflow';
-import { Maximize2, Minimize2, Save, Download, Share2 } from 'lucide-react';
+import { Maximize2, Minimize2, Save, Download, Share2, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'react-hot-toast';
 import Header from './components/Header';
@@ -22,6 +22,8 @@ import Sidebar from './components/Sidebar';
 import Canvas from './components/Canvas';
 import Dashboard from './components/Dashboard';
 import AIAssistant from './components/AIAssistant';
+import SettingsModal from './components/SettingsModal';
+import AuthModal from './components/AuthModal';
 import { SimulationState, NodeMetrics } from './types';
 import { auth, db, googleProvider, signInWithPopup, signOut, onAuthStateChanged, doc, setDoc, serverTimestamp, collection, query, where, onSnapshot, deleteDoc } from './firebase';
 import jsPDF from 'jspdf';
@@ -56,6 +58,8 @@ const initialEdges: Edge[] = [
 export default function App() {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSavedDesignsModalOpen, setIsSavedDesignsModalOpen] = useState(false);
   const [savedDesigns, setSavedDesigns] = useState<any[]>([]);
   const [showWelcome, setShowWelcome] = useState(true);
@@ -124,13 +128,7 @@ export default function App() {
   }, [user]);
 
   const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-      toast.success('Logged in successfully!');
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Failed to login.');
-    }
+    setIsAuthModalOpen(true);
   };
 
   const handleLogout = async () => {
@@ -423,6 +421,17 @@ export default function App() {
           >
             {isFullScreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
           </button>
+
+          {/* Settings Toggle Button */}
+          {!isFullScreen && (
+            <button
+              onClick={() => setIsSettingsModalOpen(true)}
+              className="absolute top-4 right-20 z-50 p-3 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-xl text-zinc-400 hover:text-emerald-500 transition-all shadow-xl"
+              title="Database Settings"
+            >
+              <Settings size={20} />
+            </button>
+          )}
         </main>
 
         {!isFullScreen && <Dashboard history={history} />}
@@ -440,6 +449,16 @@ export default function App() {
         designs={savedDesigns}
         onLoad={handleLoadDesign}
         onDelete={handleDeleteDesign}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
       />
 
       {showWelcome && <WelcomeOverlay onClose={() => setShowWelcome(false)} />}
