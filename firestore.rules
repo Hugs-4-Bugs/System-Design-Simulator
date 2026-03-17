@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - displayName: string (optional)
+    //   - email: string (required, email format)
+    //   - photoURL: string (optional)
+    //   - lastLogin: timestamp (optional)
+    //
+    // Collection: designs
+    // Document ID: {designId}
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required, max 100 chars)
+    //   - ownerUid: string (required, matches auth.uid)
+    //   - nodes: string (required, serialized JSON)
+    //   - edges: string (required, serialized JSON)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //
+    // Collection: usage
+    // Document ID: {userId}_{date}
+    // Fields:
+    //   - userId: string (required)
+    //   - date: string (required, YYYY-MM-DD)
+    //   - count: number (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.ownerUid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'displayName', 'email', 'photoURL', 'lastLogin']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email);
+    }
+
+    function isValidDesign(data) {
+      return hasOnlyAllowedFields(['id', 'name', 'ownerUid', 'nodes', 'edges', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.ownerUid == request.auth.uid &&
+             data.nodes is string && data.nodes.size() < 100000 &&
+             data.edges is string && data.edges.size() < 100000;
+    }
+
+    function isValidUsage(data) {
+      return hasOnlyAllowedFields(['userId', 'date', 'count']) &&
+             data.userId == request.auth.uid &&
+             data.date is string &&
+             data.count is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /designs/{designId} {
+      allow read: if isAuthenticated(); // Allow reading shared designs
+      allow create: if isAuthenticated() && isValidDesign(request.resource.data);
+      allow update: if isDocOwner() && isValidDesign(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    match /usage/{usageId} {
+      allow read, write: if isAuthenticated() && usageId.startsWith(request.auth.uid);
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}
