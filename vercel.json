@@ -1,15 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "env": {
-    "VITE_API_URL": "@vite_api_url",
-    "FIREBASE_API_KEY": "@firebase_api_key",
-    "FIREBASE_AUTH_DOMAIN": "@firebase_auth_domain",
-    "FIREBASE_PROJECT_ID": "@firebase_project_id",
-    "FIREBASE_STORAGE_BUCKET": "@firebase_storage_bucket",
-    "FIREBASE_MESSAGING_SENDER_ID": "@firebase_messaging_sender_id",
-    "FIREBASE_APP_ID": "@firebase_app_id"
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -27,23 +18,6 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=3600, s-maxage=3600"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
         }
       ]
     }
